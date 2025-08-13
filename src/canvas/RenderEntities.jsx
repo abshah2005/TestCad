@@ -1,5 +1,5 @@
 import React from 'react';
-import { Line, Circle, Arc } from 'react-konva';
+import { Line, Circle, Arc, Rect } from 'react-konva';
 import useCADStore from '../app/store';
 
 /**
@@ -72,51 +72,47 @@ const RenderEntities = ({ viewport }) => {
           />
         );
 
-      case 'polyline':
-        if (!entity.points || entity.points.length < 2) return null;
-        
-        const points = [];
-        entity.points.forEach(point => {
-          const screenPoint = viewport.toScreen(point);
-          points.push(screenPoint.x, screenPoint.y);
-        });
+      case 'rectangle':
+        const corner1Screen = viewport.toScreen(entity.corner1);
+        const corner2Screen = viewport.toScreen(entity.corner2);
+        const rectWidth = Math.abs(corner2Screen.x - corner1Screen.x);
+        const rectHeight = Math.abs(corner2Screen.y - corner1Screen.y);
+        const rectX = Math.min(corner1Screen.x, corner2Screen.x);
+        const rectY = Math.min(corner1Screen.y, corner2Screen.y);
 
         return (
-          <Line
+          <Rect
             key={entity.id}
-            points={points}
+            x={rectX}
+            y={rectY}
+            width={rectWidth}
+            height={rectHeight}
             stroke={color}
             strokeWidth={strokeWidth}
-            lineCap="round"
-            lineJoin="round"
-            closed={entity.closed || false}
+            fill={entity.filled ? color : undefined}
             listening={true}
             entityId={entity.id}
           />
         );
 
-      case 'rectangle':
-        const topLeft = viewport.toScreen(entity.topLeft);
-        const bottomRight = viewport.toScreen(entity.bottomRight);
-        const width = bottomRight.x - topLeft.x;
-        const height = bottomRight.y - topLeft.y;
+      case 'polyline':
+        if (!entity.vertices || entity.vertices.length < 2) return null;
+        
+        const polyPoints = [];
+        entity.vertices.forEach(vertex => {
+          const screenPoint = viewport.toScreen(vertex);
+          polyPoints.push(screenPoint.x, screenPoint.y);
+        });
 
         return (
           <Line
             key={entity.id}
-            points={[
-              topLeft.x, topLeft.y,
-              topLeft.x + width, topLeft.y,
-              topLeft.x + width, topLeft.y + height,
-              topLeft.x, topLeft.y + height,
-              topLeft.x, topLeft.y
-            ]}
+            points={polyPoints}
             stroke={color}
             strokeWidth={strokeWidth}
             lineCap="round"
             lineJoin="round"
-            closed={true}
-            fill={entity.filled ? color : undefined}
+            closed={entity.closed || false}
             listening={true}
             entityId={entity.id}
           />

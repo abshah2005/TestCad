@@ -265,12 +265,23 @@ const useCADStore = create((set, get) => {
     },
 
     /**
+     * Query entities in bounds (returns actual entities, not just IDs)
+     * @param {Object} bounds - {minX, minY, maxX, maxY}
+     * @returns {Array} Array of entities
+     */
+    queryEntities: (bounds) => {
+      const { entities } = get();
+      return spatialIndex.search(bounds)
+        .map(item => entities.get(item.entityId))
+        .filter(entity => entity);
+    },
+
+    /**
      * Get bounding box for an entity
      * @param {Object} entity - Entity to get bounds for
      * @returns {Object} Bounds {minX, minY, maxX, maxY}
      */
     getEntityBounds: (entity) => {
-      // TODO: Implement bounds calculation for each entity type
       switch (entity.type) {
         case 'line':
           return {
@@ -287,8 +298,57 @@ const useCADStore = create((set, get) => {
             maxX: entity.center.x + entity.radius,
             maxY: entity.center.y + entity.radius
           };
+          
+        case 'rectangle':
+          return {
+            minX: Math.min(entity.corner1.x, entity.corner2.x),
+            minY: Math.min(entity.corner1.y, entity.corner2.y),
+            maxX: Math.max(entity.corner1.x, entity.corner2.x),
+            maxY: Math.max(entity.corner1.y, entity.corner2.y)
+          };
+          
+        case 'arc':
+          // For arc, we need to calculate bounds considering the arc span
+          const bounds = {
+            minX: entity.center.x - entity.radius,
+            minY: entity.center.y - entity.radius,
+            maxX: entity.center.x + entity.radius,
+            maxY: entity.center.y + entity.radius
+          };
+          
+          // Get start and end points
+          const startPoint = {
+            x: entity.center.x + entity.radius * Math.cos(entity.startAngle),
+            y: entity.center.y + entity.radius * Math.sin(entity.startAngle)
+          };
+          const endPoint = {
+            x: entity.center.x + entity.radius * Math.cos(entity.endAngle),
+            y: entity.center.y + entity.radius * Math.sin(entity.endAngle)
+          };
+          
+          // For simplicity, use the full circle bounds for now
+          // TODO: Implement proper arc bounds calculation
+          return bounds;
+          
+        case 'polyline':
+          if (!entity.vertices || entity.vertices.length === 0) {
+            return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+          }
+          
+          let minX = entity.vertices[0].x;
+          let minY = entity.vertices[0].y;
+          let maxX = entity.vertices[0].x;
+          let maxY = entity.vertices[0].y;
+          
+          for (const vertex of entity.vertices) {
+            minX = Math.min(minX, vertex.x);
+            minY = Math.min(minY, vertex.y);
+            maxX = Math.max(maxX, vertex.x);
+            maxY = Math.max(maxY, vertex.y);
+          }
+          
+          return { minX, minY, maxX, maxY };
         
-        // TODO: Add other entity types
         default:
           return null;
       }

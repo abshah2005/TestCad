@@ -5,6 +5,8 @@ import Grid from './Grid';
 import RenderEntities from './RenderEntities';
 import useCADStore from '../app/store';
 import commandBus from '../app/commandBus';
+import snapEngine from '../core/snapping/SnapEngine';
+import SnapVisual from '../core/snapping/SnapVisual';
 
 /**
  * Main CAD Canvas component
@@ -14,11 +16,14 @@ const CadCanvas = ({ width = 800, height = 600 }) => {
   const stageRef = useRef();
   const viewport = useViewport();
   const [stageSize, setStageSize] = useState({ width, height });
+  const [currentSnap, setCurrentSnap] = useState(null);
 
   // Store references for event handling
   const currentCommand = useCADStore(state => state.currentCommand);
   const commandState = useCADStore(state => state.commandState);
   const updateCommandState = useCADStore(state => state.updateCommandState);
+  const ortho = useCADStore(state => state.ortho);
+  const snap = useCADStore(state => state.snap);
 
   // Handle window resize
   useEffect(() => {
@@ -45,7 +50,21 @@ const CadCanvas = ({ width = 800, height = 600 }) => {
     
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
-    const worldPoint = viewport.toWorld(pointer);
+    let worldPoint = viewport.toWorld(pointer);
+
+    // Apply snapping if enabled
+    if (snap.enabled && currentCommand) {
+      const snapResult = snapEngine.findSnapPoint(pointer, viewport);
+      if (snapResult) {
+        worldPoint = snapResult.point;
+        console.log('Snapped to:', snapResult.type, 'at', worldPoint);
+      }
+    }
+
+    // Apply ortho constraint if enabled and we have a reference point
+    if (ortho && currentCommand && commandState.lastPoint) {
+      worldPoint = snapEngine.applyOrtho(commandState.lastPoint, worldPoint);
+    }
 
     console.log('Click at world coordinates:', worldPoint);
 
@@ -58,12 +77,32 @@ const CadCanvas = ({ width = 800, height = 600 }) => {
   const handleMouseMove = (e) => {
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
-    const worldPoint = viewport.toWorld(pointer);
+    let worldPoint = viewport.toWorld(pointer);
+    let snapResult = null;
+
+    // Apply snapping if enabled
+    if (snap.enabled && currentCommand) {
+      snapResult = snapEngine.findSnapPoint(pointer, viewport);
+      if (snapResult) {
+        worldPoint = snapResult.point;
+        setCurrentSnap(snapResult);
+      } else {
+        setCurrentSnap(null);
+      }
+    } else {
+      setCurrentSnap(null);
+    }
+
+    // Apply ortho constraint if enabled and we have a reference point
+    if (ortho && currentCommand && commandState.lastPoint) {
+      worldPoint = snapEngine.applyOrtho(commandState.lastPoint, worldPoint);
+    }
 
     // Update mouse position in store for UI display
     updateCommandState({ 
       mousePosition: worldPoint,
-      screenPosition: pointer 
+      screenPosition: pointer,
+      snapPoint: snapResult
     });
 
     // Send mousemove to current command for preview updates
@@ -144,6 +183,11 @@ const CadCanvas = ({ width = 800, height = 600 }) => {
             viewport={viewport}
           />
           <RenderEntities viewport={viewport} />
+          
+          {/* Snap visual indicator */}
+          {currentSnap && (
+            <SnapVisual snapPoint={currentSnap} viewport={viewport} />
+          )}
         </Layer>
       </Stage>
 

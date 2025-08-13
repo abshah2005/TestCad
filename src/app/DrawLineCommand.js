@@ -33,6 +33,10 @@ export class DrawLineCommand extends BaseCommand {
         if (value === 'Escape') {
           await this.cancel();
           return true;
+        } else if (value === 'Enter' && this.state === 'waitingForEnd') {
+          // Finish line command like AutoCAD
+          this.finishCommand();
+          return true;
         }
         break;
         
@@ -46,12 +50,29 @@ export class DrawLineCommand extends BaseCommand {
     return false;
   }
 
+  finishCommand() {
+    // Command completed
+    this.state = 'completed';
+    
+    if (this.resolveCommand) {
+      this.resolveCommand({
+        completed: true,
+        message: 'Line command completed'
+      });
+    }
+  }
+
   async handlePointInput(point) {
+    const store = useCADStore.getState();
+    
     switch (this.state) {
       case 'waitingForStart':
         this.startPoint = { ...point };
         this.state = 'waitingForEnd';
         this.setPrompt('Specify next point:');
+        
+        // Store the last point for ortho mode
+        store.updateCommandState({ lastPoint: this.startPoint });
         return true;
 
       case 'waitingForEnd':
@@ -102,26 +123,16 @@ export class DrawLineCommand extends BaseCommand {
     // Add to drawing
     store.addEntity(line);
     
-    // Check if we should continue with another line
-    if (this.args.continuous) {
-      this.startPoint = { ...this.endPoint };
-      this.endPoint = null;
-      this.state = 'waitingForEnd';
-      this.setPrompt('Specify next point:');
-      return;
-    }
-
-    // Command completed
-    this.state = 'completed';
+    // AutoCAD-style continuous line drawing - always continue unless explicitly cancelled
+    this.startPoint = { ...this.endPoint };
+    this.endPoint = null;
+    this.state = 'waitingForEnd';
+    this.setPrompt('Specify next point or press Enter to finish:');
     
-    if (this.resolveCommand) {
-      this.resolveCommand({
-        completed: true,
-        entity: line,
-        undo: () => store.removeEntity(line.id),
-        redo: () => store.addEntity(line)
-      });
-    }
+    // Update last point for ortho mode
+    store.updateCommandState({ lastPoint: this.startPoint });
+    
+    return; // Don't complete the command, keep drawing
   }
 
   async cancel() {

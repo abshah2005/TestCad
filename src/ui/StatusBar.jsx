@@ -10,6 +10,8 @@ const StatusBar = ({ mousePosition }) => {
   const snap = useCADStore(state => state.snap);
   const selection = useCADStore(state => state.selection);
   const entities = useCADStore(state => state.entities);
+  const commandState = useCADStore(state => state.commandState);
+  const currentCommand = useCADStore(state => state.currentCommand);
 
   const formatCoordinate = (value) => {
     return value.toFixed(4);
@@ -44,9 +46,30 @@ const StatusBar = ({ mousePosition }) => {
         </div>
       </div>
 
-      {/* Center - Drawing info */}
-      <div className="flex items-center gap-2 text-gray-400">
+      {/* Center - Drawing info and snap status */}
+      <div className="flex items-center gap-4 text-gray-400">
         <span>{entities.size} entities</span>
+        
+        {/* Current snap indicator */}
+        {commandState.snapPoint && (
+          <div className="text-yellow-400 font-medium">
+            Snap: {commandState.snapPoint.type.toUpperCase()}
+          </div>
+        )}
+        
+        {/* Ortho indicator */}
+        {ortho && currentCommand && (
+          <div className="text-blue-400 font-medium">
+            ORTHO
+          </div>
+        )}
+        
+        {/* Current command prompt */}
+        {commandState.prompt && (
+          <div className="text-cyan-400 font-medium">
+            {commandState.prompt}
+          </div>
+        )}
       </div>
 
       {/* Right side - Mode indicators */}
