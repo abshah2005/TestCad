@@ -116,39 +116,36 @@ export class ScaleCommand extends BaseCommand {
   }
 
   scaleEntity(entity, factor, origin) {
+    if (typeof entity.scale === 'function') {
+      return entity.scale(factor, origin);
+    }
+    // fallback for entities without scale method
     const scaled = { ...entity };
-    
     const scalePoint = (point) => ({
       x: origin.x + (point.x - origin.x) * factor,
       y: origin.y + (point.y - origin.y) * factor
     });
-    
     switch (entity.type) {
       case 'line':
         scaled.start = scalePoint(entity.start);
         scaled.end = scalePoint(entity.end);
         break;
-        
       case 'circle':
         scaled.center = scalePoint(entity.center);
         scaled.radius = entity.radius * factor;
         break;
-        
       case 'rectangle':
         scaled.corner1 = scalePoint(entity.corner1);
         scaled.corner2 = scalePoint(entity.corner2);
         break;
-        
       case 'arc':
         scaled.center = scalePoint(entity.center);
         scaled.radius = entity.radius * factor;
         break;
-        
       case 'polyline':
         scaled.vertices = entity.vertices.map(vertex => scalePoint(vertex));
         break;
     }
-    
     return scaled;
   }
 

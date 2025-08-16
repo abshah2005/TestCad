@@ -95,9 +95,10 @@ export class DrawRectangleCommand extends BaseCommand {
     // Create final rectangle
     const rectangle = new Rectangle(this.firstCorner, this.secondCorner, {
       layerId: store.currentLayer,
-      color: null, // Use layer color
+      color: '#ff0000', // Ensure visible color
       lineweight: 1
     });
+    console.log('Committing rectangle:', rectangle); // Debug log
 
     // Add to drawing
     store.addEntity(rectangle);
