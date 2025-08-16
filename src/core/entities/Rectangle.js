@@ -154,6 +154,20 @@ export class Rectangle {
       filled: this.filled
     });
   }
+
+  /**
+   * Get all four edges as line segments
+   * @returns {Array} Array of edges [{start, end}]
+   */
+  getEdges() {
+    const corners = this.getCorners();
+    return [
+      { start: corners[0], end: corners[1] },
+      { start: corners[1], end: corners[2] },
+      { start: corners[2], end: corners[3] },
+      { start: corners[3], end: corners[0] }
+    ];
+  }
 }
 
 export default Rectangle;

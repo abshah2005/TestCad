@@ -23,6 +23,15 @@ const useCADStore = create((set, get) => {
     
     // UI state
     currentLayer: '0',
+    units: {
+      type: 'decimal', // Options: decimal, architectural, engineering, fractional, scientific
+      name: 'Decimal',
+      scale: 1.0, // Drawing units per screen unit
+      precision: 2
+    },
+    setUnits: (units) => set(produce((draft) => {
+      draft.units = { ...draft.units, ...units };
+    })),
     snap: {
       enabled: true,
       endpoint: true,
@@ -53,11 +62,11 @@ const useCADStore = create((set, get) => {
      */
     addEntity: (entity) => set(produce((draft) => {
       const id = entity.id || uuidv4();
-      const newEntity = { ...entity, id };
-      draft.entities.set(id, newEntity);
-      
+      entity.id = id; // Ensure id is set on the instance
+      draft.entities.set(id, entity); // Store the class instance, not a plain object
+      console.log('Entity added:', entity); // Debug log
       // Add to spatial index
-      const bbox = get().getEntityBounds(newEntity);
+      const bbox = get().getEntityBounds(entity);
       if (bbox) {
         spatialIndex.insert({
           minX: bbox.minX,

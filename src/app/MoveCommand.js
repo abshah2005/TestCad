@@ -112,27 +112,26 @@ export class MoveCommand extends BaseCommand {
   }
 
   moveEntity(entity, offset) {
+    if (typeof entity.move === 'function') {
+      return entity.move(offset);
+    }
+    // fallback for entities without move method
     const moved = { ...entity };
-    
     switch (entity.type) {
       case 'line':
         moved.start = { x: entity.start.x + offset.x, y: entity.start.y + offset.y };
         moved.end = { x: entity.end.x + offset.x, y: entity.end.y + offset.y };
         break;
-        
       case 'circle':
         moved.center = { x: entity.center.x + offset.x, y: entity.center.y + offset.y };
         break;
-        
       case 'rectangle':
         moved.corner1 = { x: entity.corner1.x + offset.x, y: entity.corner1.y + offset.y };
         moved.corner2 = { x: entity.corner2.x + offset.x, y: entity.corner2.y + offset.y };
         break;
-        
       case 'arc':
         moved.center = { x: entity.center.x + offset.x, y: entity.center.y + offset.y };
         break;
-        
       case 'polyline':
         moved.vertices = entity.vertices.map(vertex => ({
           x: vertex.x + offset.x,
@@ -140,7 +139,6 @@ export class MoveCommand extends BaseCommand {
         }));
         break;
     }
-    
     return moved;
   }
 
